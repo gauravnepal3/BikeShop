@@ -1,0 +1,117 @@
+﻿@page "/chart"
+@using ChartJs.Blazor.PieChart
+@using System.Drawing
+
+
+<div class="mb-5">
+
+    <h2>Items Taken Out</h2>
+    <div class="bg-white">
+        <Chart Config="_config"></Chart>
+    </div>
+</div>
+<div class="my-5">
+    <h2>Items in Inventory</h2>
+    <div class="bg-white">
+        <Chart Config="_pieConfig"></Chart>
+    </div>
+</div>
+
+@code {
+    private const int InitalCount = 7;
+    private BarConfig _config;
+    private PieConfig _pieConfig;
+    private List<ItemGroupTransaction> _itemTransaction;
+    private List<InventoryItem> _inventoryItem;
+
+    protected override void OnInitialized()
+    {
+        _itemTransaction = TransactionService.GetGroupedTransaction();
+        if (_itemTransaction != null)
+        {
+            _config = new BarConfig
+            {
+                Options = new BarOptions
+                {
+                    Responsive = true,
+                    Title = new OptionsTitle
+                    {
+                        Display = true,
+                        Text = "Total Items Taken out from Inventory",
+
+                    },
+                    Scales = new BarScales
+                    {
+                        YAxes = new List<CartesianAxis>
+    {
+                        new LinearCartesianAxis
+                        {
+                            Ticks = new LinearCartesianTicks
+                            {
+                                BeginAtZero = true
+                            }
+                        }
+                    }
+                    }
+                }
+            };
+
+            var dataset = new BarDataset<int>()
+            {
+                Label = "Numbers",
+                BackgroundColor = "blue",
+                BarThickness = 50
+            };
+            //Mapping Data in dataset
+            foreach (var itemLog in _itemTransaction)
+            {
+                _config.Data.Labels.Add(ItemsService.GetItemById(itemLog.ItemId).ItemName);
+                dataset.Add(itemLog.Quantity);
+            }
+
+            _config.Data.Datasets.Add(dataset);
+
+        }
+
+        _inventoryItem = ItemsService.GetItemsByAvailablity(true);
+        if (_inventoryItem != null)
+        {
+            _pieConfig = new PieConfig
+            {
+                Options = new PieOptions
+                {
+                    Responsive = true,
+                    Title = new OptionsTitle
+                    {
+                        Display = true,
+                        Text = "ChartJs.Blazor Pie Chart"
+                    }
+                }
+            };
+        }
+
+        PieDataset<int> piedataset = new PieDataset<int>()
+        {
+            BackgroundColor = new[]
+        {
+//Adding Color palete
+            ColorUtil.ColorHexString(255, 99, 132),
+            ColorUtil.ColorHexString(255, 205, 86),
+            ColorUtil.ColorHexString(75, 192, 192),
+            ColorUtil.ColorHexString(54, 162, 235),
+            ColorUtil.ColorHexString(66, 135, 245),
+            ColorUtil.ColorHexString(245, 66, 218),
+            ColorUtil.ColorHexString(222, 22, 52),
+        }
+        };
+        //Mapping Data in dataset
+        foreach (var item in _inventoryItem)
+        {
+            _pieConfig.Data.Labels.Add(item.ItemName);
+            piedataset.Add(item.Quantity);
+        }
+        _pieConfig.Data.Datasets.Add(piedataset);
+
+    }
+}
+

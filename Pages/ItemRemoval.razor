@@ -1,0 +1,58 @@
+﻿@page "/item-removal"
+@inject NavigationManager NavManager
+<div class="d-flex justify-content-between mt-2 mb-3">
+    <h3 class="">Your Item Request</h3>
+    <NavLink href="request-removal" class="btn btn-primary">
+        <span class="oi oi-plus" />
+        New Request
+    </NavLink>
+</div>
+@if (_itemRequest==null)
+{
+
+<p>...Loading</p>
+}
+else
+{
+<table class="table">
+    <thead>
+        <tr>
+            <th>Item Name</th>
+            <th>Quantity</th>
+            <th>Request Date</th>
+            <th>Status</th>
+            <th>Approved By</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var request in _itemRequest)
+        {
+            <tr>
+                <td>@{ 
+                    var itemName=ItemsService.GetItemById(request.ItemID);
+                    <span>@(itemName.ItemName)</span>
+                        }</td>
+                <td>@request.Quantity</td>
+                <td>@request.TransactionTime</td>
+                <td>@request.TransactionStatus</td>
+                <td>
+                    @{
+                        var approvedAdmin = UsersService.GetUserById(request.ApprovedBy);
+                        <span>@(approvedAdmin==null ? "Not Approved":approvedAdmin.Username)</span>
+                    }
+                </td>
+             </tr>
+        }
+    </tbody>
+</table>
+}
+@code {
+    [CascadingParameter]
+    private GlobalState _globalState { get; set; }
+    private List<ItemTransaction> _itemRequest { get; set; }
+    protected override void OnInitialized()
+    {
+        _itemRequest = TransactionService.GetUserRequest(_globalState.CurrentUser.Id);
+    }
+}
+

@@ -1,0 +1,184 @@
+﻿@page "/restore-item"
+<div class="d-flex justify-content-between mt-2 mb-3">
+    <h3 class="">Archieved Items</h3>
+</div>
+
+@if (_items == null)
+{
+
+
+    <p><em>Loading...</em></p>
+}
+else
+{
+    if (_items.Count > 0)
+    {
+        <table class="table mt-5">
+            <thead>
+                <tr>
+                    <th>
+                        <div class="d-flex justify-content-center align-items-center">
+                            <button class="btn d-flex align-items-center text-@(_sortBy == "itemName" ? "primary" : "secondary")"
+                                    @onclick='() => SortByHandler("itemName")'>
+                                <span class="text-primary me-2">
+                                    Product Name
+                                </span>
+                                <span class="material-icons @(_sortBy == "quantity" ? "text-danger" : "text-secondary")">
+                                    sort
+                                </span>
+                            </button>
+                        </div>
+                    </th>
+                    <th>
+                        <div class="d-flex justify-content-center align-items-center">
+                            <button class="btn d-flex align-items-center text-@(_sortBy == "quantity" ? "primary":"secondary")"
+                                    @onclick='() =>  SortByHandler("quantity")'>
+                                <span class="text-primary me-2">
+                                    Available Quantity
+                                </span>
+                                <span class="material-icons @(_sortBy == "quantity" ? "text-danger" : "text-secondary")">
+                                    sort
+                                </span>
+                            </button>
+                        </div>
+                    </th>
+                    <th>
+                        <div class="d-flex justify-content-center align-items-center">
+                            <button class="btn d-felx align-items-center">
+                                <span class="text-primary me-2">
+                                    Created By
+                                </span>
+                            </button>
+                        </div>
+                    </th>
+                    <th>
+                        <div class="d-flex justify-content-center align-items-center">
+                            <button class="btn d-flex align-items-center text-@(_sortBy == "transactionDate" ? "primary":"secondary")"
+                                    @onclick='() =>  SortByHandler("transactionDate")'>
+                                <span class="text-primary me-2">
+                                    Last Transaction
+                                </span>
+                                <span class="material-icons @(_sortBy == "transactionDate" ? "text-danger" : "text-secondary")">
+                                    sort
+                                </span>
+                            </button>
+                        </div>
+                    </th>
+                    <th>
+                        <div class="d-flex justify-content-center align-items-center">
+                            <button class="btn d-felx align-items-center">
+                                <span class="text-primary me-2">
+                                    Action
+                                </span>
+                            </button>
+                        </div>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in _items)
+                {
+                    <tr>
+                        <td>@item.ItemName</td>
+                        <td>@item.Quantity</td>
+                        <td>
+                            @{
+                                var userCreator = UsersService.GetUserById(item.CreatedBy);
+                                <span>@(userCreator==null ? "Unknown":userCreator.Username)</span>
+                            }
+                        </td>
+                        <td>@item.LastTransactionDate.ToShortDateString()</td>
+                        <td>
+                            <button @onclick="() => HandleRestore(item)" type="button" class="btn btn-outline-success">
+                                Restore
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="bg-white d-flex justify-content-center fw-bold align-items-center mt-3 p-5">
+            No archieved items
+        </div>
+    }
+
+    @if (_showRestoreItemModal)
+    {
+        <ModalDialog Title="Delete Item" OnClose="@OnRestoreDialogClose" OkLabel="Restore">
+
+            @if (_restoreErrorMessage != null)
+            {
+                <Messages Message="@(_restoreErrorMessage)" MessageType="Error" />
+            }
+            <p class="my-3">Are you sure you want to restore item?</p>
+        </ModalDialog>
+    }
+}
+@code {
+    [CascadingParameter]
+    private GlobalState _globalState { get; set; }
+    private List<InventoryItem> _items { get; set; }
+    private string _sortBy = "Quantity";
+    private string _sortingDirection = "ascending";
+    private string _restoreErrorMessage { get; set; }
+    private bool _showRestoreItemModal { get; set; } = false;
+    private InventoryItem _selectedItem { get; set; }
+    protected override void OnInitialized()
+    {
+        _items = ItemsService.GetItemsByAvailablity(false);
+    }
+
+    private void SortByHandler(string sortBy)
+    {
+        _sortingDirection = _sortingDirection == "ascending" ? "descending" : "ascending";
+        if (sortBy == "itemName")
+        {
+            _items = _sortingDirection == "ascending" ? _items.OrderBy(x => x.ItemName).ToList() : _items.OrderByDescending(x => x.ItemName).ToList();
+
+        }
+        else if (sortBy == "quantity")
+        {
+            _items = _sortingDirection == "ascending" ? _items.OrderBy(x => x.Quantity).ToList() : _items.OrderByDescending(x => x.Quantity).ToList();
+        }
+        else if (sortBy == "transactionDate")
+        {
+            _items = _sortingDirection == "ascending" ? _items.OrderBy(x => x.LastTransactionDate).ToList() : _items.OrderByDescending(x => x.LastTransactionDate).ToList();
+        }
+    }
+
+    private void HandleRestore(InventoryItem item)
+    {
+        _selectedItem = item;
+        _showRestoreItemModal = true;
+    }
+
+    private void OnRestoreDialogClose(bool isCancel)
+    {
+        if (isCancel)
+        {
+            _showRestoreItemModal = false;
+            _restoreErrorMessage = null;
+        }
+        else
+        {
+            try
+            {
+                _restoreErrorMessage = null;
+                ItemsService.DeleteToogle(_selectedItem.Id);
+                _items = ItemsService.GetItemsByAvailablity(false);
+                _selectedItem = null;
+                _showRestoreItemModal = false;
+
+            }
+            catch (Exception e)
+            {
+                _restoreErrorMessage = e.Message;
+            }
+        }
+
+    }
+}
+

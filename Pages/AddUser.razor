@@ -1,0 +1,62 @@
+﻿@page "/add-user"
+@inject NavigationManager NavManager
+<h3 class="mt-2 mb-3">Add User</h3>
+
+<form class="px-2 py-4 bg-white" @onsubmit="HandleSubmit">
+    @if (_errorMessage != null)
+        {
+            //Displaying error while adding user
+            <Messages Message="@_errorMessage" MessageType="Error"/>
+}
+<div class="form-floating mb-3">
+    <input type="text" class="form-control" id="floatingInput" @bind="_username" placeholder="John">
+    <label for="floatingInput">Username</label>
+</div>
+<div class="form-floating mb-3">
+    <input type="password" class="form-control" id="floatingPassword" @bind="_password" placeholder="Password">
+    <label for="floatingPassword">Password</label>
+</div>
+<label>User Type:</label>
+<select @onchange="HandleRoleChange" class="form-select form-select-lg mb-3" aria-label="form-select-lg example">
+    <option value="Admin">Admin</option>
+    <option value="User">User</option>
+</select>
+<div class="text-center">
+    <button class="btn btn-primary px-5" type="submit">Add</button>
+</div>
+</form>
+@code {
+    [CascadingParameter]
+    private GlobalState _globalState { get; set; }
+    private string _errorMessage { get; set; }
+    private string _username { get; set; }
+    private string _password { get; set; }
+    private Role _userRole { get; set; }
+    private void HandleRoleChange(ChangeEventArgs e)
+    {
+        //Changing role on select based on user choice
+        _userRole = (Role)Enum.Parse(typeof(Role), e.Value.ToString());
+    }
+
+    private void HandleSubmit()
+    {
+        if ((!(string.IsNullOrEmpty(_username))) || (!(string.IsNullOrEmpty(_password))))
+        {
+            try
+            {
+                _errorMessage = "";
+                UsersService.CreateUser(_globalState.CurrentUser.Id, _username, _password, _userRole);
+                NavManager.NavigateTo("/users");
+            }
+            catch (Exception e)
+            {
+                _errorMessage = e.Message;
+            }
+        }
+        else
+        {
+            _errorMessage = "Username and password cannot be set empty";
+        }
+    }
+}
+

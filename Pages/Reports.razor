@@ -1,0 +1,175 @@
+﻿@page "/reports"
+@inject NavigationManager NavManager
+<div class="d-flex justify-content-between mt-2 mb-3">
+    <h3>Reports</h3>
+</div>
+@if (_errorMessage != null && _errorMessage != "")
+{
+    <Messages Message="@(_errorMessage)" MessageType="Error" />
+}
+@if (!_monthSelected)
+{
+    <span class="mb-5 fs-4">Please select month to get respective report</span>
+}
+<div class="row row-cols-3 mt-3">
+    <div class="col">
+        <span class="mb-4">
+            <label class="fw-bold" for="year">Year:</label>
+            <select @onchange="HandleYearChange" class="form-select" id="year" name="year">
+                <option value="0" selected>Select year</option>
+                <option value="2019">2019</option>
+                <option value="2020">2020</option>
+                <option value="2021">2021</option>
+                <option value="2022">2022</option>
+                <option value="2023">2023</option>
+                <option value="2024">2024</option>
+                <option value="2025">2025</option>
+                <option value="2026">2026</option>
+            </select>
+        </span>
+    </div>
+    <div class="col">
+        <span>
+            <label class="fw-bold" for="month">Month:</label>
+            <select @onchange="HandleMonthChange" class="form-select" id="month" name="month">
+                <option value="0" selected>Select month</option>
+                <option value="01">January</option>
+                <option value="02">February</option>
+                <option value="03">March</option>
+                <option value="04">April</option>
+                <option value="05">May</option>
+                <option value="06">June</option>
+                <option value="07">July</option>
+                <option value="08">August</option>
+                <option value="09">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+            </select>
+        </span>
+    </div>
+    <div class="col pt-4">
+        <button @onclick="HandleSearch" class="btn btn-primary d-flex my-auto w-100 mt-1  justify-content-center align-items-center">
+            <span class="material-icons me-3">
+                search
+            </span>
+            <span>
+                Search
+            </span>
+        </button>
+    </div>
+</div>
+<div class="my-3">
+    @if (_monthSelected)
+    {
+        <span class="py-4 fs-4">Showing Report for @(DateTime.Parse($"{_selectedYear}-{_selectedMonth}").ToString("MMMM yyyy"))</span>
+        @if (_reportTransaction != null && _reportTransaction.Count > 0)
+        {
+            <div class="report-table mt-4">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Item Name</th>
+                            <th>Quantity</th>
+                            <th>Request Date</th>
+                            <th>Requested By</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var request in _reportTransaction)
+                        {
+                            <tr>
+                                <td>
+                                    @{
+                                        var itemName = ItemsService.GetItemById(request.ItemID);
+                                        <span>@(itemName.ItemName)</span>
+                                    }
+                                </td>
+                                <td>@request.Quantity</td>
+                                <td>@request.TransactionTime</td>
+                                <td>
+                                    @{
+                                        var requestUser = UsersService.GetUserById(request.RequestedBy);
+                                        <span>@(requestUser == null ? "Unknown" : requestUser.Username)</span>
+                                    }
+                                </td>
+                                <td>@request.TransactionStatus</td>
+                            </tr>
+                        }
+
+
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="bg-white d-flex justify-content-center fw-bold align-items-center mt-3 p-5">
+                No transaction found for selected month
+            </div>
+
+        }
+    }
+</div>
+
+
+
+@code {
+    [CascadingParameter]
+    private GlobalState _globalState { get; set; }
+    private bool _monthSelected { get; set; } = false;
+    private int _selectedMonth { get; set; }
+    private int _selectedYear { get; set; }
+    private string _errorMessage { get; set; }
+    private List<ItemTransaction> _reportTransaction { get; set; }
+
+    private void HandleMonthChange(ChangeEventArgs e)
+    {
+        try
+        {
+            _monthSelected = false;
+            _errorMessage = null;
+            _selectedMonth = Int32.Parse(e.Value.ToString());
+        }
+        catch (Exception)
+        {
+            _errorMessage = "Please selected a valid month";
+        }
+    }
+    private void HandleYearChange(ChangeEventArgs e)
+    {
+        try
+        {
+            _monthSelected = false;
+            _errorMessage = null;
+            _selectedYear = Int32.Parse(e.Value.ToString());
+        }
+        catch (Exception)
+        {
+            _errorMessage = "Please selected a valid year";
+        }
+    }
+
+    private void HandleSearch()
+    {
+        if (_selectedYear != 0 && _selectedMonth != 0)
+        {
+            try
+            {
+                _errorMessage = null;
+                _reportTransaction = TransactionService.GetMonthlyTransactions(_selectedYear, _selectedMonth);
+                _monthSelected = true;
+            }
+            catch (Exception e)
+            {
+                _errorMessage = e.Message;
+            }
+        }
+        else
+        {
+            _errorMessage = "Report cannot be generated with invalid year and month";
+        }
+    }
+}
+

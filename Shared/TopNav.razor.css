@@ -1,0 +1,20 @@
+﻿body {
+}
+
+.top-navbar {
+    box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
+}
+.active.inactive {
+    width:24px;
+    height:24px;
+    padding:10px;
+  
+}
+
+.active {
+color:green;
+}
+.inactive {
+    color:red;
+}
+

@@ -1,0 +1,97 @@
+﻿@page "/login"
+@inject NavigationManager NavManager
+<div class="w-100 vh-100 d-flex flex-column justify-content-center align-items-center">
+    <div class="login-container">
+        <div class="d-flex justify-content-center my-3">
+            <span class="material-icons fs-1 text-primary">
+                directions_bike
+            </span>
+            <div class="nav-item px-3 fw-bold fs-3 mb-5">bikeShop</div>
+        </div>
+        @if (_isUsingDeafultAccount)
+        {
+            <div class="alert alert-info mt-3" role="alert">
+                Username: <strong>@UsersService.SeedUsername</strong><br />
+                Password: <strong>@UsersService.SeedPassword</strong>
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+
+            <div>
+                <Messages Message="@_errorMessage" MessageType="Error" />
+            </div>
+        }
+        <form class="mt-1" @onsubmit="HandleSubmit">
+            <div class="form-floating mb-3">
+                <input type="text" class="form-control username_field position-relative" id="floatingInput" @bind="_username" placeholder="john111">
+                <label for="floatingInput">Username</label>
+            </div>
+            <div class="form-floating">
+                <input type="password" class="form-control password_field position-relative" id="floatingPassword" @bind="_password" placeholder="Password">
+                <label for="floatingPassword">Password</label>
+            </div>
+            <div class="mt-5 pt-4">
+                <button class="btn btn-primary d-flex align-items-center justify-content-center w-100 text-center p-2" type="submit">
+                    <span class="material-icons me-3">
+                        login
+                    </span>
+                    <span>
+                        Login
+                    </span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@code{
+    [CascadingParameter]
+    private GlobalState _globalState { get; set; }
+    private bool _isUsingDeafultAccount { get; set; }
+    private string _username { get; set; }
+    private string _password { get; set; }
+    private string _errorMessage { get; set; }
+
+
+
+    protected override void OnInitialized()
+    {
+        try
+        {
+
+            var user = UsersService.Login(UsersService.SeedUsername, UsersService.SeedPassword);
+            //Checking user password before redirecting
+            _isUsingDeafultAccount = user.UsingDefaultPassword;
+
+        }
+        catch (Exception e)
+        {
+            _errorMessage = e.Message;
+        }
+        _errorMessage = "";
+        _globalState.CurrentUser = null;
+    }
+
+
+    private void HandleSubmit()
+    {
+        try
+        {
+            _errorMessage = "";
+            _globalState.CurrentUser = UsersService.Login(_username, _password);
+            if (_globalState.CurrentUser != null)
+            {
+                //if user found redirecting to dashboard
+                NavManager.NavigateTo(_globalState.CurrentUser.UsingDefaultPassword ? "/change-password" : "/");
+            }
+        } catch (Exception e)
+        {
+            _errorMessage = e.Message;
+            Console.WriteLine(e);
+        }
+    }
+
+}
+
+

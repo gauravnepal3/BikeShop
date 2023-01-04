@@ -1,0 +1,107 @@
+﻿@page "/users"
+@inject NavigationManager NavManager
+<div class="d-flex justify-content-between mt-2 mb-3">
+    <h3>Users</h3>
+    <NavLink href="add-user" class="btn btn-primary">
+        <span class="oi oi-plus" />
+        Add User
+    </NavLink>
+</div>
+@if (_users == null)
+{
+    <p>...Loading</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Created By</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in _users)
+                {
+                <tr>
+                    <td>@user.Username</td>
+                    <td>@user.Role</td>
+                    <td>
+                        @{
+                            var userCreator = UsersService.GetUserById(user.CreatedBy);
+                            <span>@(userCreator == null ? "Unknown" : userCreator.Username)</span>
+                        }
+                    </td>
+                    <td>
+                        <!-- Button trigger modal -->
+                        <button @onclick="() => HandleDelete(user)" disabled=@(user.Id ==  (_globalState.CurrentUser!= null ? _globalState.CurrentUser.Id:null) ? true : false) type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#exampleModal">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+                            }
+        </tbody>
+    </table>
+    @if (_showDeleteUserModal)
+    {
+        <ModalDialog Title="Delete User" OnClose="@OnDeleteDialogClose" OkLabel="Delete">
+
+            @if (_deleteErrorMessage != null)
+            {
+                <Messages Message="@(_deleteErrorMessage)" MessageType="Error" />
+            }
+            <p class="my-3">Are you sure you want to delete user?</p>
+        </ModalDialog>
+    }
+}
+
+@code {
+    [CascadingParameter]
+    private GlobalState _globalState { get; set; }
+    private List<User> _users { get; set; }
+    private string _deleteErrorMessage { get; set; }
+    private bool _showDeleteUserModal { get; set; } = false;
+    private User _selectedUser { get; set; }
+    private IList<string> _test { get; set; }
+
+    protected override void OnInitialized()
+    {
+        _users = UsersService.GetAllUsers();
+        //_test = ItemsService.GetItemById(TransactionService.GetTransactionsByType(TransactionType.Remove).Select(x=>x.itemID).ToList());
+
+    }
+
+    private void HandleDelete(User deleteUser)
+    {
+        _selectedUser = deleteUser;
+        _showDeleteUserModal = true;
+
+    }
+
+    private void OnDeleteDialogClose(bool isCancel)
+    {
+        if (isCancel)
+        {
+            _showDeleteUserModal = false;
+        }
+        else
+        {
+            try
+            {
+                _deleteErrorMessage = null;
+                _users = UsersService.Delete(_selectedUser.Id);
+                _selectedUser = null;
+                _showDeleteUserModal = false;
+
+            }
+            catch (Exception e)
+            {
+                _deleteErrorMessage = e.Message;
+            }
+        }
+
+    }
+    }
+

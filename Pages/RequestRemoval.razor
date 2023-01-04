@@ -1,0 +1,82 @@
+﻿@page "/request-removal"
+@inject NavigationManager NavManager
+<h3>New Item Removal Request</h3>
+@if (_items == null)
+{
+    <p>Loading ....</p>
+}
+else
+{
+    <form @onsubmit="HandleSubmit">
+        @if (_errorMessage != null)
+            {
+            <Messages Message="@_errorMessage" MessageType="Error" />
+            }
+        <div class="mb-4">
+            <select @onchange="HandleChange" class="form-select" aria-label="Default select example">
+                <option selected>Select an item</option>
+                @foreach (var item in _items)
+                    {
+                    <option value=(@item.Id)>@item.ItemName</option>
+                    }
+            </select>
+        </div>
+        <div>
+            <div class="form-floating mb-3">
+                <input type="number" class="form-control" id="floatingPassword" @bind="_requestQuantity" required placeholder="Type number here">
+                <label for="floatingPassword">Requested Quantity</label>
+            </div>
+        </div>
+        <div class="text-center">
+            <button class="btn btn-primary" type="submit">Request</button>
+        </div>
+
+    </form>
+}
+
+@code {
+    [CascadingParameter]
+    private GlobalState _globalState { get; set; }
+    private List<InventoryItem> _items { get; set; }
+    private Guid _selectedItem { get; set; }
+    private int _requestQuantity { get; set; }
+    private string _errorMessage { get; set; }
+    protected override void OnInitialized()
+    {
+        _items = ItemsService.GetItemsByAvailablity(true);
+    }
+    private void HandleChange(ChangeEventArgs e)
+    {
+        _errorMessage = null;
+        _selectedItem = new Guid(e.Value.ToString());
+    }
+    private void HandleSubmit()
+    {
+        if (_selectedItem == Guid.Empty)
+        {
+            _errorMessage = "Please select a item";
+        }
+        else
+        {
+            if (_requestQuantity > 0)
+            {
+                try
+                {
+                    _errorMessage = "";
+                    TransactionService.AddTranasction(_selectedItem, _requestQuantity, _globalState.CurrentUser.Id, TransactionType.Remove);
+                    NavManager.NavigateTo("/item-removal");
+                }
+                catch (Exception e)
+                {
+                    _errorMessage = e.Message;
+                }
+            }
+            else
+            {
+                _errorMessage = "Item less than 1 cannot be requested!!!";
+            }
+        }
+    }
+    }
+
+

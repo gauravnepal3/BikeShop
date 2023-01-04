@@ -1,0 +1,220 @@
+﻿@page "/item-approval"
+@inject NavigationManager NavManager
+<div class="d-flex justify-content-between mt-2 mb-3">
+    <h3>Pending Approval Request</h3>
+</div>
+@if (_allItemRequest == null)
+{
+
+    <p>...Loading</p>
+}
+else
+{
+
+
+    @if (_pendingItemRequest.Count > 0)
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>
+                      Item Name
+                    </th>
+                    <th>Quantity</th>
+                    <th>Request Date</th>
+                    <th>Requested By</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var request in _pendingItemRequest)
+                {
+                    <tr>
+                        <td>
+                            @{
+                                var itemName = ItemsService.GetItemById(request.ItemID);
+                                <span>@(itemName.ItemName)</span>
+                            }
+                        </td>
+                        <td>@request.Quantity</td>
+                        <td>@request.TransactionTime</td>
+                        <td>
+                            @{
+                                var requestUser = UsersService.GetUserById(request.RequestedBy);
+                                <span>@(requestUser == null ? "Unknown" : requestUser.Username)</span>
+                            }
+                        </td>
+                        <td>@request.TransactionStatus</td>
+                        <td>
+                            <button @onclick="() => OpenUpdateModel(request)" class="btn btn-danger">Update Status</button>
+                        </td>
+                    </tr>
+                }
+
+
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="bg-white d-flex justify-content-center fw-bold align-items-center mt-3 p-5">
+            No pending approval found
+        </div>
+    }
+    <div class="d-flex justify-content-between mt-5 mb-3">
+        <h3>Previously Approved Request</h3>
+    </div>
+}@if (_allItemRequest.Count > 0)
+{
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Item Name</th>
+                <th>Quantity</th>
+                <th>Request Date</th>
+                <th>Requested By</th>
+                <th>Status</th>
+                <th>Approved By</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var request in _allItemRequest)
+            {
+                <tr>
+                    <td>
+                        @{
+                            var itemName = ItemsService.GetItemById(request.ItemID);
+                            <span>@(itemName.ItemName)</span>
+                        }
+                    </td>
+                    <td>@request.Quantity</td>
+                    <td>@request.TransactionTime</td>
+                    <td>
+                        @{
+                            var requestUser = UsersService.GetUserById(request.RequestedBy);
+                            <span>@(requestUser == null ? "Unknown" : requestUser.Username)</span>
+                        }
+                    </td>
+                    <td>@request.TransactionStatus</td>
+                    <td>
+                        @{
+                            var approvedAdmin = UsersService.GetUserById(request.ApprovedBy);
+                            <span>@(approvedAdmin == null ? "Unknown" : approvedAdmin.Username)</span>
+                        }
+                    </td>
+                </tr>
+            }
+
+
+        </tbody>
+    </table>
+}
+else
+{
+    <div class="bg-white d-flex justify-content-center fw-bold align-items-center mt-3 p-5">
+        No previously approved request found
+    </div>
+
+}
+
+@if (_showUpdateForm)
+{
+    <ModalDialog Title="Update Status" OnClose="@OnUpdateDialogClose" OkLabel="Update">
+        <form>
+            @if (_approvalErrorMessage != null)
+            {
+                <Messages Message="@(_approvalErrorMessage)" MessageType="Error" />
+            }
+            <div class="d-flex mb-4">
+                <span class="me-4">
+                    Item Name:
+                </span>
+                <span class="fw-bold">
+                    @(ItemsService.GetItemById(_selectedModelTransaction.ItemID).ItemName)
+                </span>
+            </div>
+            <div class="d-flex mb-4">
+                <span class="me-4">
+                    Requested Quantity:
+                </span>
+                <span class="fw-bold">
+                    @(_selectedModelTransaction.Quantity)
+                </span>
+            </div>
+            <div class="d-flex mb-4">
+                <span class="me-4">
+                    Requested By:
+                </span>
+                <span class="fw-bold">
+                    @{
+                        var requestUser = UsersService.GetUserById(_selectedModelTransaction.RequestedBy);
+                        <span>@(requestUser == null ? "Unknown" : requestUser.Username)</span>
+                    }
+                </span>
+            </div>
+            <select @onchange="HandleStatusChange" class="form-select" aria-label="Default select example">
+                <option selected="@(_selectedModelTransaction.TransactionStatus == Status.Pending)" value="Pending">Pending</option>
+                <option selected="@(_selectedModelTransaction.TransactionStatus == Status.Approved)" value="Approved">Approved</option>
+                <option selected="@(_selectedModelTransaction.TransactionStatus == Status.Rejected)" value="Rejected">Rejected</option>
+            </select>
+        </form>
+    </ModalDialog>
+}
+@code {
+    [CascadingParameter]
+    private GlobalState _globalState { get; set; }
+    private List<ItemTransaction> _allItemRequest { get; set; }
+    private List<ItemTransaction> _pendingItemRequest { get; set; }
+    private string _errorMessage { get; set; }
+    private bool _showUpdateForm { get; set; }
+    private ItemTransaction _selectedModelTransaction { get; set; }
+    private Status _updatedStatus { get; set; }
+    private string _approvalErrorMessage { get; set; }
+
+    protected override void OnInitialized()
+    {
+        _pendingItemRequest = TransactionService.GetTransactionsByStatus(Status.Pending);
+        _allItemRequest = TransactionService.GetTransactionsByType(TransactionType.Remove);
+    }
+    private void OpenUpdateModel(ItemTransaction selectedTransaction)
+    {
+        _selectedModelTransaction = selectedTransaction;
+        _showUpdateForm = true;
+    }
+    private void OnUpdateDialogClose(bool isCancel)
+    {
+        if (isCancel)
+        {
+            //If user canceled
+
+            _showUpdateForm = false;
+            _selectedModelTransaction = null;
+        }
+        else
+        {
+            try
+            {
+                //If user 
+                _approvalErrorMessage = null;
+                TransactionService.ApproveTransaction(_globalState.CurrentUser.Id, _selectedModelTransaction.Id, _updatedStatus);
+                _pendingItemRequest = TransactionService.GetTransactionsByStatus(Status.Pending);
+                _allItemRequest = TransactionService.GetTransactionsByType(TransactionType.Remove);
+                _showUpdateForm = false;
+                _selectedModelTransaction = null;
+            }
+            catch (Exception e)
+            {
+                _approvalErrorMessage = e.Message;
+            }
+        }
+    }
+
+    //Handling changes in the select
+    private void HandleStatusChange(ChangeEventArgs e)
+    {
+        _updatedStatus = (Status)Enum.Parse(typeof(Status), e.Value.ToString());
+    }
+}
+
